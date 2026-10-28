@@ -1,0 +1,13 @@
+name: lifecycle-test
+on:
+  workflow_dispatch:
+concurrency:
+  group: lifecycle-test
+  cancel-in-progress: false
+jobs:
+  sleep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: sleep
+        run: sleep 300
