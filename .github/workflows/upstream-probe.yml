@@ -1,0 +1,46 @@
+name: upstream-probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    env:
+      SHARD: ${{ matrix.shard }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install opencode2api v1.4.5
+        run: |
+          set -euo pipefail
+          url=https://github.com/jasonxu114514/opencode2api/releases/download/v1.4.5/opencode2api_v1.4.5_linux_amd64.tar.gz
+          curl -fsSL --retry 3 -o /tmp/o2a.tar.gz "$url"
+          echo "469ea7ab6eb38d409378748721607daef55a770b92cc9e2466a5aad81639fcf2  /tmp/o2a.tar.gz" | sha256sum -c -
+          mkdir -p /tmp/o2a
+          tar -xzf /tmp/o2a.tar.gz -C /tmp/o2a --strip-components=1
+          chmod +x /tmp/o2a/opencode2api
+          ls -l /tmp/o2a/opencode2api
+          chmod +x bin/zen-direct
+
+      - name: Probe
+        run: bash probe/run-probe.sh 2>&1 | tee /tmp/probe.log
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### shard ${{ matrix.shard }}"
+            echo '```'
+            cat /tmp/probe.log 2>/dev/null || echo "(no log)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
